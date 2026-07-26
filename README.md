@@ -10,16 +10,18 @@ Architectural handover documentation from the outgoing AI architect (Claude) to 
 | [AIR_Handover.md](AIR_Handover.md) | AIR — Automation Intelligence Recorder (workflow → generated Python + SOP docs) | [air](https://github.com/kristic8998/air) | v0.1.0, CI green |
 | [LendOps_Toolkit_Handover.md](LendOps_Toolkit_Handover.md) | LendOps Toolkit — BureauFlow, LedgerSync Pro, AlertForge | [lendops-toolkit](https://github.com/kristic8998/lendops-toolkit) | v1.0.0, CI green |
 | [LendOps_Studio_Handover.md](LendOps_Studio_Handover.md) | LendOps Studio — Collecta, PolicySim, KYC Sentinel | [lendops](https://github.com/kristic8998/lendops) | v1.0.0, CI green |
+| [DocuParse_AI_Handover.md](DocuParse_AI_Handover.md) | DocuParse AI — PDF/scan → structured Excel (module of FinOps Command Center) | [finops-command-center](https://github.com/kristic8998/finops-command-center) (private) | v1.0.0, no CI yet |
+| [Cronus_Orchestrator_Handover.md](Cronus_Orchestrator_Handover.md) | Cronus Orchestrator — script run/schedule/monitor (module of FinOps Command Center) | [finops-command-center](https://github.com/kristic8998/finops-command-center) (private) | v1.0.0, no CI yet |
 
 ## Honest scope note (read this first)
 
-Two additionally requested documents — **DocuParse_AI** and **Cronus_Orchestrator** — are **not included** because no such projects exist in this account's repositories or in the outgoing architect's build history. Writing an "architectural blueprint" for software that does not exist would poison an AI-to-AI handover with fabricated context. If these projects live elsewhere, share their source and a matching handover document can be produced to the same standard.
+**Update 2026-07-26:** DocuParse_AI and Cronus_Orchestrator were initially omitted because no standalone repos by those names exist. The owner has since provided the build session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`) showing both exist as **modules inside the private `finops-command-center` repo**, built in a parallel session. Their handover docs are now included, **derived from those records rather than a first-hand code read** — each doc states this provenance in its header; treat the code as authoritative where they disagree. Note that FinOps Command Center's own records state its GUI has never been rendered on a real screen (verified only via a mock-Tk layer) and it has no committed test suite or CI yet — unlike the four repos above.
 
 Other real repositories not (yet) documented here: `filesmith` (CLI file organizer), `visionqc` (vision QC library/API), `xlforge` / `xlforge-web`.
 
 ## Cross-project conventions (apply everywhere)
 
-These four desktop apps share one architecture DNA. Learn it once:
+The four repos above share one architecture DNA. Learn it once. (FinOps Command Center follows the same *contracts* with different names: `BackgroundTaskRunner`/`UiDispatcher.post` instead of `TaskRunner`/`run_in_thread`, `ColumnMatcher` concept-aliases instead of `find_col` hints — details in its two module docs.)
 
 1. **Engine/UI split.** Business logic lives in `modules/` as pure pandas/stdlib services with **zero UI imports** — every engine is unit-testable headless. UI pages are thin CustomTkinter frames that call engines through a thread pool.
 2. **Threading contract.** All heavy work goes through `TaskRunner.submit(fn, on_done=…, on_error=…)` (a small `ThreadPoolExecutor` wrapper). UI callbacks are marshalled back to the Tk thread via `widget.after(0, …)` — the helper `run_in_thread(widget, runner, func, on_done, on_error)` in each project's `ui/widgets.py` does this. **Never touch a Tk widget from a worker thread.**
