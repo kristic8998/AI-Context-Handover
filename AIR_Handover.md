@@ -1,4 +1,4 @@
-# AIR (Automation Intelligence Recorder) — AI Handover Document
+# AIR (Automation Intelligence Recorder) - System Architecture & AI Handover Context
 
 Repo: https://github.com/kristic8998/air · Current: **v0.1.0** (beta) · Package name: `air-automation`, import name `air`. CLI entry: `air`.
 
@@ -6,7 +6,7 @@ Repo: https://github.com/kristic8998/air · Current: **v0.1.0** (beta) · Packag
 
 AIR turns a *described or recorded* repetitive workflow into two artifacts: (a) a complete, runnable, production-quality **Python automation script**, and (b) a manager-readable **Markdown SOP** describing the same process. The analyst edits a typed workflow model (steps + conditions + loops + error policies), not code. Value: it removes the "I know the process but can't code it robustly" gap — generated scripts come with logging, a typed Config dataclass, retry/continue/stop error policies, and screenshots-on-failure, which hand-rolled scripts never have. It is deliberately a **generator, not a runner**: emitting text is safe, testable, and dependency-light.
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 - Runtime dependency: **only `pydantic>=2.6`** (the whole engine is stdlib + pydantic — keep it that way; this is a core design constraint).
 - Optional extras: `run` (pyautogui, selenium, requests, pandas, openpyxl — needed only to *execute generated scripts*), `record` (pynput — for the future Phase-2 live recorder), `dev` (pytest, black, ruff, pyinstaller).
@@ -54,3 +54,13 @@ Emits: imports (only for backends actually used), a `Config` dataclass (collecte
 5. **SQLite locking on Windows** (rare, if users script around the CLI): Library opens short-lived connections; keep it that way — no long-lived shared connection, no threads writing concurrently.
 6. **`events_to_workflow` producing noisy steps** (one step per keystroke): the collapsing rules live there; extend the coalescing window rather than post-processing in the CLI.
 7. Version bump touches `pyproject.toml` + `src/air/__init__.py` only (no installer — AIR is a CLI, exempt from the desktop packaging rule).
+
+## 6. Mock Data Simulation & Execution Guide
+
+AIR eats event streams, not spreadsheets, so its simulator fabricates a noisy recorded desktop session.
+
+1. `python mock_data_simulator.py` — repo root (pandas/numpy only). Writes `mock_data/capture_events.json` (47 raw events: 37 per-keystroke `type` events incl. ₹ and Bengali chars, clicks, hotkeys, sub-second waits, an `open_app`) and `events_summary.csv`.
+2. Synthesize + generate (from repo root):
+   `python -c "import json,sys; sys.path.insert(0,'src'); from air.recorder import CaptureEvent, events_to_workflow; from air.generator import generate_code; ev=[CaptureEvent(**e) for e in json.load(open('mock_data/capture_events.json'))]; print(generate_code(events_to_workflow(ev,'mock-session')))"`
+3. Expected results: the 47 events collapse to a **12-step** workflow with exactly **2** `type_text` steps; the printed script must `ast.parse` clean (~186 lines with logging + Config + main guard).
+4. Headless validation (2026-07-26): exactly those numbers, verified before publishing. If `type_text` count ≠ 2, the recorder's keystroke coalescing regressed (heuristic §5.6).

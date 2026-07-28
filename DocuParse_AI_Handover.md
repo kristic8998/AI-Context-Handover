@@ -1,4 +1,4 @@
-# DocuParse AI — AI Handover Document
+# DocuParse AI - System Architecture & AI Handover Context
 
 **Not a standalone repo.** DocuParse AI is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins — verify before large refactors.
 
@@ -6,11 +6,11 @@
 
 Turns PDF bank statements and scanned/photographed documents into structured, styled Excel: extracted tables plus regex-mined fields (PAN, IFSC, GSTIN, account numbers, balances). Handles the real-world worst case — a photographed statement — by rebuilding tables from OCR word boxes. **PII masking is ON by default** (`XXXXXXXX7890`, `A**** S*****`, last four characters survive for reconciliation); there is a UI toggle to disable. Rationale recorded in the source session: the team's Claude plan has no BAA, so exports must not casually carry full identifiers. All test data was synthetic.
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 pdfplumber, pypdf, pytesseract, pdf2image, opencv-python-headless (optional), pandas, numpy, openpyxl, XlsxWriter. **External programs Tesseract OCR and Poppler are NOT bundled** into the exe — installed per machine; the app's Dashboard probes what's missing and names the affected feature. Host app: customtkinter shell, PyInstaller `build.spec` (folder mode), hardened `run.bat` launcher. **No committed test suite / no GitHub Actions yet** — verification in the source session was ad-hoc scripts plus a mock-Tk stub layer (666 widgets instantiated headlessly); a real-screen render has never happened (see §5.1).
 
-## 3. Directory Structure (module slice of finops-command-center)
+## 3. Complete Directory Structure (module slice of finops-command-center)
 
 ```
 app/modules/docuparse/        # PURE engine — no Tkinter anywhere (enforced by AST check)
@@ -42,3 +42,13 @@ app/ui/pages/docuparse_page.py (842)   # UI, incl. drag-and-drop via app/ui/dnd.
 5. **OCR path returns nothing**: Tesseract/Poppler missing on the machine — check the Dashboard probes first, not the code.
 6. **New deferred import added anywhere** → add it to `build.spec` `hiddenimports` or the frozen exe dies with `ModuleNotFoundError`.
 7. Money parsing, scheduling, page registration: reuse the existing single implementations (`parse_number`, `ScheduleSpec`+`CronusScheduler`, `PageSpec` in `app/ui/registry.py`) — the host app's core discipline is "one engine, many views".
+
+## 6. Mock Data Simulation & Execution Guide
+
+`mock_data_simulator.py` sits at the **finops-command-center repo root** (added 2026-07-26 by the outgoing architect; generation logic verified standalone — the *app-side* run still needs a first real pass, since this architect never had the app's code locally).
+
+1. `python mock_data_simulator.py` — repo root; needs pandas/numpy/openpyxl (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
+2. `python main.py` (source) or the frozen exe → use the files below on the matching pages.
+
+3. **DocuParse AI page** → `mock_data/statement.pdf`. Expected: 7 transaction rows; the repeated mid-table header row must be dropped by `_drop_repeated_headers()`; `Debit/Credit/Balance` coerce to float64 (sparse columns allowed); `"Rs 42,000.00"` parses via `parse_number()`'s currency-word branch; `"(2,500.00)"` → `-2500.0`; the export must show PII **masked** (`XXXXX...4567`, PAN masked) because masking is default-on.
+4. **MIS pages** → `mock_data/loanbook_clean.xlsx` (aliased headers like `Disbursed Amount (INR)` / `Days Past Due` / `LAN` prefixes exercise `ColumnMatcher`) and `mock_data/loanbook_hostile.csv` — cp1252, `;` delimiter, money as `"Rs 1,20,000.00"` text, one fully blank row: exactly the loader-sniffing gauntlet §7 of the source session verified.

@@ -1,15 +1,15 @@
-# LendOps Toolkit — AI Handover Document
+# LendOps Toolkit - System Architecture & AI Handover Context
 
-Repo: https://github.com/kristic8998/lendops-toolkit · Current: **v1.0.0** · Package `lendtoolkit`, CLI `lendtoolkit` (`--selftest` for headless verification). CI green on Ubuntu + Windows, Python 3.10/3.12.
+Repo: https://github.com/kristic8998/lendops-toolkit · Current: **v1.0.1** · Package `lendtoolkit`, CLI `lendtoolkit` (`--selftest` for headless verification). CI green on Ubuntu + Windows, Python 3.10/3.12.
 
 ## 1. Core Purpose & Business Value
 
 Three heavy-duty lending utilities in one lightweight, 100% click-driven Windows desktop app for a micro-lending ops team: **BureauFlow Extractor** (parse CIBIL/Experian credit bureau reports — XML or text-PDF — into score/accounts/overdue/defaults, export Excel/CSV), **LedgerSync Pro** (3-way reconciliation: payment gateway vs bank statement vs internal DB, every transaction classified, pie summary, mismatch workbook), **AlertForge Engine** (DPD-triggered personalised collection reminders with escalation tiers, smtplib sender in **simulation mode by default**, live log, exportable trigger list). Every page has a permanent 3-step How-to-Use card and a "Try with sample data" button.
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 - customtkinter, pandas, numpy, openpyxl, **pypdf** (lazy-imported inside the PDF path only), **tkinterdnd2** (drag-and-drop; graceful fallback to click-to-browse if missing). No matplotlib — the recon pie is drawn on a plain `tk.Canvas` (`PieChart` widget) to stay light.
-- 40 pytest tests; ruff/black; headless selftest (4 checks) with the UTF-8 console shim; standard CI matrix; `requirements.txt` mirrors pyproject (owner requested both).
+- 41 pytest tests; ruff/black; headless selftest (4 checks) with the UTF-8 console shim; standard CI matrix; `requirements.txt` mirrors pyproject (owner requested both).
 - Packaging: `LendOpsToolkit.spec` — note it collects **both** `collect_data_files("customtkinter")` and `collect_data_files("tkinterdnd2")`; the tkdnd binaries line is what makes drag-and-drop work in the frozen exe. `scripts/build_windows.bat`, `build_portable.bat`, `installer/lendops_toolkit.iss` (per-user, fixed AppId).
 
 ## 3. Complete Directory Structure
@@ -58,3 +58,12 @@ Two parsing paths, one `_finalize()` → `BureauReport(applicant, score, score_b
 7. **Emails sent in tests?** Impossible unless someone constructed `EmailSender(dry_run=False, host=…)` — tests must only use dry_run or the no-host skip path (`test_real_mode_without_host_skips_safely`).
 8. **Windows selftest encoding** → `_utf8_console()` shim, same as FinSight.
 9. Version bump touches: pyproject, `__init__.py`, `installer/lendops_toolkit.iss`, `scripts/build_portable.bat`.
+
+## 6. Mock Data Simulation & Execution Guide
+
+1. `python mock_data_simulator.py` — repo root; writes `mock_data/bureau_report.xml`, `recon_gateway.csv` / `recon_bank.csv` / `recon_internal.csv` (headers deliberately differ per leg), `daily_loans.xlsx`. The script **prints every planted break with its transaction id**.
+2. `lendtoolkit` (or `python -m lendtoolkit`) → load each file on its page.
+3. Expected results: **BureauFlow** — score 716 (Good), exactly **4** tradelines (the `<Accounts>` container must not duplicate), total overdue **19,200**, 1 past default; amounts are comma-formatted on purpose. **LedgerSync** — 200 txns, 195 Success (97.5%), and `UTR300001→Amount Mismatch, 02→Pending Settlement, 03→Missing in Internal DB, 04→Missing in Gateway, 05→Duplicate ID, 06→Success (0.50 within tolerance)`. **AlertForge** — dpd values sit on the 15/16 and 45/46 tier boundaries; dry-run mode means nothing sends.
+4. Headless validation (2026-07-26): all expectations above verified green against the real engines before publishing.
+
+**v1.0.1 exists because of this simulator**: its comma-formatted bureau amounts exposed a real bug — `_finalize` used plain `to_numeric`, silently zeroing "50,000"-style values (the repo's own comma-less sample never triggered it). Fixed via `_to_number` mapping + regression test `test_comma_formatted_amounts_parse`. Moral: mock data must be *nastier* than the sample data.

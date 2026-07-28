@@ -1,4 +1,4 @@
-# LendOps Studio — AI Handover Document
+# LendOps Studio - System Architecture & AI Handover Context
 
 Repo: https://github.com/kristic8998/lendops · Current: **v1.0.0** · Package `lendops`, CLI `lendops` (`--selftest`). CI green on Ubuntu + Windows, Python 3.10/3.12. *(Distinct project from `lendops-toolkit` — same architecture DNA, different modules.)*
 
@@ -6,7 +6,7 @@ Repo: https://github.com/kristic8998/lendops · Current: **v1.0.0** · Package `
 
 One click-driven desktop app for the three daily jobs of a micro-lending operations team (target demographic: students & young professionals): **Collecta** (delinquency prediction → prioritized, phone-ready calling lists with a plain-English reason per call), **PolicySim** (backtest hypothetical credit rules against the historical book → actual-vs-simulated P&L and default rate, with stated assumptions), **KYC Sentinel** (application fraud screening: shared bank accounts/IDs across different names, underage, age/DOB mismatch, invalid PAN, absurd ask-to-income). Every page: permanent How-to-Use card + "Try with sample data" button; all engines pure and headless-tested (44 tests).
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 customtkinter, pandas, numpy, openpyxl, **scikit-learn** (lazy-imported only inside Collecta's model-upgrade path — engines import without it). Dev: pytest/ruff/black/pyinstaller. Standard CI matrix + headless selftest. Packaging: `LendOps.spec` (collects customtkinter assets, hiddenimport `sklearn.linear_model`, bundles `sample_data/`), `scripts/build_windows.bat` + `build_portable.bat`, `installer/lendops.iss`.
 
@@ -48,3 +48,10 @@ PolicySim page uses `_RuleSlider` (checkbox-gated CTkSlider + live value label; 
 5. **KYC flags on wrong rows** after any refactor: positional bookkeeping requires the initial `reset_index(drop=True)`; iterate with positions, not original index labels.
 6. **DOB parsing warnings/misreads**: inputs are dayfirst Indian formats; keep `dayfirst=True`, coerce errors, and treat unparseable DOB as "no DOB" (falls back to stated age), never as underage.
 7. Threading/encoding/version-bump/packaging heuristics: identical to the cross-project conventions in README.md (TaskRunner + after(0); `_utf8_console`; bump pyproject/__init__/iss/bat together; PyInstaller hiddenimports).
+
+## 6. Mock Data Simulation & Execution Guide
+
+1. `python mock_data_simulator.py` — repo root; writes `mock_data/active_loans.xlsx`, `active_loans_sparse.csv` (3 columns only), `historical_loans.xlsx` (outcome column, both classes), `daily_applications.xlsx`. Seeded and reproducible.
+2. `lendops` (or `python -m lendops`) → upload each file on its page.
+3. Expected results (verify, don't admire): **Collecta** — row `LN50000` (dpd 90, otherwise rosy) must score **High** (severe-DPD floor); the sparse CSV must still band all rows. **PolicySim** — sliders move approval/default/profit; row `HL90000` has a NaN rate (24% APR fallback path). **KYC Sentinel** — exactly **3 alerts** planted (shared bank account under two different names ×2 rows, underage DOB) plus watch-level: invalid PAN, 25× income ask, shared phone (2 rows), missing bank account.
+4. Headless validation (2026-07-26): `collecta.analyze`, `policysim.simulate`, `kyc.scan` run green on these exact files; KYC severity counts came back `{alert: 3, watch: 7}`.

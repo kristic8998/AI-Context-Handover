@@ -1,4 +1,4 @@
-# FinSight — AI Handover Document
+# FinSight - System Architecture & AI Handover Context
 
 Repo: https://github.com/kristic8998/finsight · Current: **v1.5.1** (use this tag; **v1.5.0's tag is broken** — see §6) · CI: GitHub Actions, green on Ubuntu + Windows, Python 3.10/3.12.
 
@@ -6,7 +6,7 @@ Repo: https://github.com/kristic8998/finsight · Current: **v1.5.1** (use this t
 
 FinSight is a Windows desktop suite that replaces the pile of Excel sheets, SQL scripts and manual MIS work inside an NBFC/FinTech lending team. One offline-first app: executive KPIs and health scoring, English-question NLQ over the loan book, SQL studio, Excel tools, 3-file reconciliation with root-cause analysis, MIS pack generation, explainable analytics (forecast/anomalies/segments/risk), a Data Quality Center, an API Explorer, a drop-in plugin system, and — since v1.5 — **MIS Studio**: a zero-code Visual MIS Builder, three One-Click Lending Templates, and a Visual Auto-Reporter (scheduling). It ships with a deterministic synthetic lending book so everything works on first launch; production data connects via SQLAlchemy (SQLite/MSSQL/Azure SQL). Business value: a senior data analyst hands non-technical colleagues a double-click install that does their daily reporting with zero training and zero cloud exposure of lending data.
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 - Python 3.10–3.12, **CustomTkinter** UI (+ ttk.Treeview grids), **pandas/numpy**, **matplotlib** (embedded via `FigureCanvasTkAgg` — Analytics page and MIS Builder chart), **scikit-learn** (explainable models: KMeans, logistic; also Collecta-style scoring in the DQ engine tests), **SQLAlchemy** (+ optional `pyodbc` extra for MSSQL), **pydantic + PyYAML** (typed config), **openpyxl** (all Excel writing), **keyring** (credentials → Windows Credential Manager), **requests** (API Explorer).
 - Dev: pytest (155 tests), ruff (with `known-first-party = ["finsight"]` pinned — do not remove), black (line-length 100), PyInstaller.
@@ -93,5 +93,14 @@ finsight/
 9. **Version bumps touch 4 files**: `pyproject.toml`, `src/finsight/__init__.py`, `installer/finsight.iss`, `scripts/build_portable.bat`. CI does not check this — grep before tagging.
 10. **v1.5.0 tag is a broken snapshot** (missing the five MIS Studio engine files — failed web upload). Never diff/build against it; v1.5.1 is the canonical MIS Studio release.
 
-## 6. Release history quick map
+## 6. Mock Data Simulation & Execution Guide
+
+1. `python mock_data_simulator.py` — run from the repo root (needs pandas/numpy/openpyxl only). Writes `mock_data/lending_book.xlsx`, `lending_book.csv` and the deliberately hostile `lending_book_stress.csv`. Seeded (`SEED = 20260726`): identical output every run, so planted edge cases sit on stable rows.
+2. `finsight` (installed) or `python -m finsight` from an installed source tree — open **MIS Studio** in the sidebar.
+3. **One-Click Templates** tab → pick `mock_data/lending_book.xlsx` → each of the three giant buttons must produce a styled Excel. **Report Wizard** tab → same file → any pivot in three clicks. Then upload `lending_book_stress.csv`: messy headers, a blank row, duplicate rows and text-formatted numbers must yield a report, never a traceback.
+4. Headless engine smoke (how these files were validated on 2026-07-26): from the repo root run `run_template` for all three template keys plus `build_pivot(group_by="branch", value="loan_amount")` against the xlsx — all green, TOTAL row present.
+
+Planted edge cases: NaN outstanding/dpd, zero-amount and Rs 5,000,000 outlier loans, a negative adjustment, dpd 999, a blank and a Bengali customer name, and every DPD `pd.cut` bucket edge (0/1/29/30/31/59/60/61/89/90/91/180/365).
+
+## 7. Release history quick map
 v1.0 core suite → v1.1 MIS catalog/branding → v1.2 recon root-cause → v1.3 Windows packaging+docs → v1.4 Data Quality + API Explorer + plugin architecture → v1.5/**v1.5.1** MIS Studio (Builder/Templates/Auto-Reporter). CHANGELOG.md is accurate and maintained — keep it that way.

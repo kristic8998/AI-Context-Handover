@@ -1,4 +1,4 @@
-# Cronus Orchestrator — AI Handover Document
+# Cronus Orchestrator - System Architecture & AI Handover Context
 
 **Not a standalone repo.** Cronus Orchestrator is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins.
 
@@ -6,11 +6,11 @@
 
 Register, run, schedule and monitor external scripts (`.py` / `.bat` / `.ps1`) from a click-driven desktop page with a live, terminal-style log viewer — so a non-technical ops team can operate the automation scripts an analyst writes, without a terminal. Its `ScheduleSpec` + `CronusScheduler` are also the scheduling backbone for the app's MIS Auto-Reporter (deliberate reuse — see §4.4).
 
-## 2. Tech Stack, Libraries & CI/CD
+## 2. Tech Stack & Dependencies
 
 APScheduler (+ tzlocal), psutil, stdlib `subprocess`. Host app: customtkinter, PyInstaller. `.bat`/`.ps1` execution is Windows-only by design; `.py` runs anywhere. **No committed test suite / CI yet** — the source session verified the runner against 10 live scenarios (success, non-zero exit, traceback capture, 2s timeout, mid-run stop with 11 streamed ticks, double-start refusal, missing file, unsupported type, cwd/env injection, unicode ₹/Bengali intact) and armed a real schedule that fired after 2.0s.
 
-## 3. Directory Structure (module slice of finops-command-center)
+## 3. Complete Directory Structure (module slice of finops-command-center)
 
 ```
 app/modules/cronus/           # PURE engine — no Tkinter anywhere
@@ -47,3 +47,13 @@ MIS's `ReportSchedule` duck-types exactly what `CronusScheduler` reads (`id`, `n
 5. **"Scheduler doesn't run my report at 6 PM"** when the app was closed: not a bug — while-app-open limitation, stated in UI/README/USER_GUIDE. Point the user to Windows Task Scheduler.
 6. **Unicode in child output**: ₹ and Bengali verified intact through the streaming path — if garbled after a refactor, check the stream decoding, not the child.
 7. Host-app rules apply: engines never import Tkinter; UI callbacks only via `UiDispatcher.post`; GUI has never rendered on a real screen (see the DocuParse doc §5.1 — same risk, same protocol); new deferred imports go into `build.spec` `hiddenimports`.
+
+## 6. Mock Data Simulation & Execution Guide
+
+`mock_data_simulator.py` sits at the **finops-command-center repo root** (added 2026-07-26 by the outgoing architect; generation logic verified standalone — the *app-side* run still needs a first real pass, since this architect never had the app's code locally).
+
+1. `python mock_data_simulator.py` — repo root; needs pandas/numpy/openpyxl (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
+2. `python main.py` (source) or the frozen exe → use the files below on the matching pages.
+
+3. **Cronus page** → register the scripts in `mock_data/cronus_scripts/` and run each: `ok.py` (clean exit), `fail.py` (non-zero exit + friendly error surfaced), `slow.py` (ten 1-second ticks — they must appear **live** in the log viewer, not in one burst at the end; this is the `-u`/`PYTHONUNBUFFERED` check), `unicode.py` (₹ + Bengali must render intact), `args.py` (pass `one "two words"` — the child must receive 2 arguments, quotes stripped: the shlex fix).
+4. Stop `slow.py` mid-run to exercise the psutil process-tree kill; schedule `ok.py` one minute ahead to prove a real timer fire.
