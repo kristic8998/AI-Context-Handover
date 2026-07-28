@@ -1,6 +1,6 @@
 # DocuParse AI - System Architecture & AI Handover Context
 
-**Not a standalone repo.** DocuParse AI is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins — verify before large refactors.
+**Not a standalone repo.** DocuParse AI is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins — verify before large refactors. **Corrections exist:** a first-hand document by the architect who built this app was later added — [FinOps_Command_Center_Handover.md](FinOps_Command_Center_Handover.md) (2026-07-27). Where the two disagree, prefer it; prefer the code over both.
 
 ## 1. Core Purpose & Business Value
 
@@ -8,7 +8,7 @@ Turns PDF bank statements and scanned/photographed documents into structured, st
 
 ## 2. Tech Stack & Dependencies
 
-pdfplumber, pypdf, pytesseract, pdf2image, opencv-python-headless (optional), pandas, numpy, openpyxl, XlsxWriter. **External programs Tesseract OCR and Poppler are NOT bundled** into the exe — installed per machine; the app's Dashboard probes what's missing and names the affected feature. Host app: customtkinter shell, PyInstaller `build.spec` (folder mode), hardened `run.bat` launcher. **No committed test suite / no GitHub Actions yet** — verification in the source session was ad-hoc scripts plus a mock-Tk stub layer (666 widgets instantiated headlessly); a real-screen render has never happened (see §5.1).
+pdfplumber, pypdf, pytesseract, pdf2image, opencv-python-headless (optional), pandas, numpy, openpyxl, XlsxWriter. **External programs Tesseract OCR and Poppler are NOT bundled** into the exe — installed per machine; the app's Dashboard probes what's missing and names the affected feature. Host app: customtkinter shell, PyInstaller `build.spec` (folder mode), hardened `run.bat` launcher. **Now tested + CI green** (per the first-hand doc, 2026-07-27): 156 pytest tests, CI with lint / 4-way test matrix (Ubuntu+Windows × Python 3.11/3.12) / packaging-sanity / advisory forward-compat jobs. Still true: **the GUI has never been rendered on a real screen** (mock-Tk verification only — see §5.1).
 
 ## 3. Complete Directory Structure (module slice of finops-command-center)
 
@@ -47,8 +47,9 @@ app/ui/pages/docuparse_page.py (842)   # UI, incl. drag-and-drop via app/ui/dnd.
 
 `mock_data_simulator.py` sits at the **finops-command-center repo root** (added 2026-07-26 by the outgoing architect; generation logic verified standalone — the *app-side* run still needs a first real pass, since this architect never had the app's code locally).
 
-1. `python mock_data_simulator.py` — repo root; needs pandas/numpy/openpyxl (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
+1. `python mock_data_simulator.py` — repo root; needs pandas/numpy (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
 2. `python main.py` (source) or the frozen exe → use the files below on the matching pages.
 
 3. **DocuParse AI page** → `mock_data/statement.pdf`. Expected: 7 transaction rows; the repeated mid-table header row must be dropped by `_drop_repeated_headers()`; `Debit/Credit/Balance` coerce to float64 (sparse columns allowed); `"Rs 42,000.00"` parses via `parse_number()`'s currency-word branch; `"(2,500.00)"` → `-2500.0`; the export must show PII **masked** (`XXXXX...4567`, PAN masked) because masking is default-on.
-4. **MIS pages** → `mock_data/loanbook_clean.xlsx` (aliased headers like `Disbursed Amount (INR)` / `Days Past Due` / `LAN` prefixes exercise `ColumnMatcher`) and `mock_data/loanbook_hostile.csv` — cp1252, `;` delimiter, money as `"Rs 1,20,000.00"` text, one fully blank row: exactly the loader-sniffing gauntlet §7 of the source session verified.
+4. **Verify, don't eyeball**: `mock_data/statement_expected.csv` is the ground truth for the PDF's transaction table — the extracted table must match it row for row after cleaning. (Note: MIS Studio is NOT part of this repo — it was removed; `finsight` v1.5.1 owns it. Earlier drafts of this doc referenced MIS loan-book files; they now live conceptually with finsight's own simulator.)
+5. Related engine trap worth knowing before touching `cleaner.py`: the pandas-3 `StringDtype` dtype-guard bug — see the first-hand doc's §5 heuristics.

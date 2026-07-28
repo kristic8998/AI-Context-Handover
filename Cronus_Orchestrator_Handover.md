@@ -1,6 +1,6 @@
 # Cronus Orchestrator - System Architecture & AI Handover Context
 
-**Not a standalone repo.** Cronus Orchestrator is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins.
+**Not a standalone repo.** Cronus Orchestrator is a module inside **FinOps Command Center** — https://github.com/kristic8998/finops-command-center (**private**), v1.0.0, built in a parallel Cowork session. This document is derived from that session's own handoff records (`SESSION_HANDOFF.md` + `FILE_MAP.md`, provided by the owner on 2026-07-26), not from a first-hand code read by this architect. Where this doc and the actual code disagree, the code wins. **Corrections exist:** a first-hand document by the architect who built this app was later added — [FinOps_Command_Center_Handover.md](FinOps_Command_Center_Handover.md) (2026-07-27). Where the two disagree, prefer it; prefer the code over both.
 
 ## 1. Core Purpose & Business Value
 
@@ -8,7 +8,7 @@ Register, run, schedule and monitor external scripts (`.py` / `.bat` / `.ps1`) f
 
 ## 2. Tech Stack & Dependencies
 
-APScheduler (+ tzlocal), psutil, stdlib `subprocess`. Host app: customtkinter, PyInstaller. `.bat`/`.ps1` execution is Windows-only by design; `.py` runs anywhere. **No committed test suite / CI yet** — the source session verified the runner against 10 live scenarios (success, non-zero exit, traceback capture, 2s timeout, mid-run stop with 11 streamed ticks, double-start refusal, missing file, unsupported type, cwd/env injection, unicode ₹/Bengali intact) and armed a real schedule that fired after 2.0s.
+APScheduler (+ tzlocal), psutil, stdlib `subprocess`. Host app: customtkinter, PyInstaller. `.bat`/`.ps1` execution is Windows-only by design; `.py` runs anywhere. **Now tested + CI green** (156 pytest tests, 4 CI jobs — see the first-hand doc). The source session additionally verified the runner against 10 live scenarios (success, non-zero exit, traceback capture, 2s timeout, mid-run stop with 11 streamed ticks, double-start refusal, missing file, unsupported type, cwd/env injection, unicode ₹/Bengali intact) and armed a real schedule that fired after 2.0s.
 
 ## 3. Complete Directory Structure (module slice of finops-command-center)
 
@@ -52,7 +52,7 @@ MIS's `ReportSchedule` duck-types exactly what `CronusScheduler` reads (`id`, `n
 
 `mock_data_simulator.py` sits at the **finops-command-center repo root** (added 2026-07-26 by the outgoing architect; generation logic verified standalone — the *app-side* run still needs a first real pass, since this architect never had the app's code locally).
 
-1. `python mock_data_simulator.py` — repo root; needs pandas/numpy/openpyxl (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
+1. `python mock_data_simulator.py` — repo root; needs pandas/numpy (+ `reportlab` for the PDF; skipped with a printed note if absent). Seeded, reproducible.
 2. `python main.py` (source) or the frozen exe → use the files below on the matching pages.
 
 3. **Cronus page** → register the scripts in `mock_data/cronus_scripts/` and run each: `ok.py` (clean exit), `fail.py` (non-zero exit + friendly error surfaced), `slow.py` (ten 1-second ticks — they must appear **live** in the log viewer, not in one burst at the end; this is the `-u`/`PYTHONUNBUFFERED` check), `unicode.py` (₹ + Bengali must render intact), `args.py` (pass `one "two words"` — the child must receive 2 arguments, quotes stripped: the shlex fix).
