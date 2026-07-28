@@ -1,10 +1,10 @@
 # LendOps Studio - System Architecture & AI Handover Context
 
-Repo: https://github.com/kristic8998/lendops · Current: **v1.0.0** · Package `lendops`, CLI `lendops` (`--selftest`). CI green on Ubuntu + Windows, Python 3.10/3.12. *(Distinct project from `lendops-toolkit` — same architecture DNA, different modules.)*
+Repo: https://github.com/kristic8998/lendops · Current: **v1.1.0** · Package `lendops`, CLI `lendops` (`--selftest`). CI green on Ubuntu + Windows, Python 3.10/3.12. *(Distinct project from `lendops-toolkit` — same architecture DNA, different modules.)*
 
 ## 1. Core Purpose & Business Value
 
-One click-driven desktop app for the three daily jobs of a micro-lending operations team (target demographic: students & young professionals): **Collecta** (delinquency prediction → prioritized, phone-ready calling lists with a plain-English reason per call), **PolicySim** (backtest hypothetical credit rules against the historical book → actual-vs-simulated P&L and default rate, with stated assumptions), **KYC Sentinel** (application fraud screening: shared bank accounts/IDs across different names, underage, age/DOB mismatch, invalid PAN, absurd ask-to-income). Every page: permanent How-to-Use card + "Try with sample data" button; all engines pure and headless-tested (44 tests).
+One click-driven desktop app for the three daily jobs of a micro-lending operations team (target demographic: students & young professionals): **Collecta** (delinquency prediction → prioritized, phone-ready calling lists with a plain-English reason per call), **PolicySim** (backtest hypothetical credit rules against the historical book → actual-vs-simulated P&L and default rate, with stated assumptions), **KYC Sentinel** (application fraud screening: shared bank accounts/IDs across different names, underage, age/DOB mismatch, invalid PAN, absurd ask-to-income). Every page: permanent How-to-Use card + "Try with sample data" button; all engines pure and headless-tested (47 tests).
 
 ## 2. Tech Stack & Dependencies
 
@@ -38,6 +38,8 @@ Frame is `reset_index(drop=True)` first (all flag bookkeeping is positional). Cr
 
 ### 4.4 UI specifics
 PolicySim page uses `_RuleSlider` (checkbox-gated CTkSlider + live value label; unticked ⇒ `value() is None` ⇒ rule off) and renders the comparison as a label grid (not KPI-card spam) + a declined-loans DataGrid. Collecta/KYC grids tint rows by `risk_band`/`severity` via DataGrid's `tint_by=` (tag map in `widgets._TINT_TAGS`). Sample-data buttons call `core.demo` generators directly in-memory (no temp files) — saving a Builder-style recipe against sample data is intentionally refused where a real path is required.
+
+ **Since v1.1.0:** every engine coerces numeric columns through the app's single robust parser (`parse_amount_series` — text money "Rs 1,20,000.00", accounting negatives, Cr/Dr suffixes, percents) instead of bare `to_numeric`; never regress to plain `to_numeric` on user-supplied columns.
 
 ## 5. AI-to-AI Debugging Heuristics
 

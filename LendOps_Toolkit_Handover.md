@@ -1,6 +1,6 @@
 # LendOps Toolkit - System Architecture & AI Handover Context
 
-Repo: https://github.com/kristic8998/lendops-toolkit · Current: **v1.0.1** · Package `lendtoolkit`, CLI `lendtoolkit` (`--selftest` for headless verification). CI green on Ubuntu + Windows, Python 3.10/3.12.
+Repo: https://github.com/kristic8998/lendops-toolkit · Current: **v1.1.0** · Package `lendtoolkit`, CLI `lendtoolkit` (`--selftest` for headless verification). CI green on Ubuntu + Windows, Python 3.10/3.12.
 
 ## 1. Core Purpose & Business Value
 
@@ -9,7 +9,7 @@ Three heavy-duty lending utilities in one lightweight, 100% click-driven Windows
 ## 2. Tech Stack & Dependencies
 
 - customtkinter, pandas, numpy, openpyxl, **pypdf** (lazy-imported inside the PDF path only), **tkinterdnd2** (drag-and-drop; graceful fallback to click-to-browse if missing). No matplotlib — the recon pie is drawn on a plain `tk.Canvas` (`PieChart` widget) to stay light.
-- 41 pytest tests; ruff/black; headless selftest (4 checks) with the UTF-8 console shim; standard CI matrix; `requirements.txt` mirrors pyproject (owner requested both).
+- 45 pytest tests; ruff/black; headless selftest (4 checks) with the UTF-8 console shim; standard CI matrix; `requirements.txt` mirrors pyproject (owner requested both).
 - Packaging: `LendOpsToolkit.spec` — note it collects **both** `collect_data_files("customtkinter")` and `collect_data_files("tkinterdnd2")`; the tkdnd binaries line is what makes drag-and-drop work in the frozen exe. `scripts/build_windows.bat`, `build_portable.bat`, `installer/lendops_toolkit.iss` (per-user, fixed AppId).
 
 ## 3. Complete Directory Structure
@@ -46,6 +46,8 @@ Two parsing paths, one `_finalize()` → `BureauReport(applicant, score, score_b
 
 ### 4.4 AlertForge (`modules/alerts.py`)
 `build_alerts(df, AlertRule(dpd_threshold, gentle_max=15, firm_max=45))` → filter dpd ≥ threshold, tier Gentle/Firm/Final, personalised message from `_TEMPLATES` (name/amount/loan_id/dpd interpolated), sorted worst-first. `EmailSender(dry_run=True)` **cannot send by accident** — real SMTP requires explicit host+sender and unchecking Simulation mode in the UI; `send_batch` never raises per-row (skipped/failed rows are logged via `on_log` callback, which the UI marshals with `self.after(0,…)`). Export: Alerts + Summary sheets (or CSV).
+
+ **Since v1.1.0:** every engine coerces numeric columns through the app's single robust parser (`parse_amount_series` — text money "Rs 1,20,000.00", accounting negatives, Cr/Dr suffixes, percents) instead of bare `to_numeric`; never regress to plain `to_numeric` on user-supplied columns. LedgerSync `_normalize` also uses it per leg.
 
 ## 5. AI-to-AI Debugging Heuristics
 

@@ -1,6 +1,6 @@
 # FinSight - System Architecture & AI Handover Context
 
-Repo: https://github.com/kristic8998/finsight · Current: **v1.5.1** (use this tag; **v1.5.0's tag is broken** — see §6) · CI: GitHub Actions, green on Ubuntu + Windows, Python 3.10/3.12.
+Repo: https://github.com/kristic8998/finsight · Current: **v1.6.0** (use this tag; **v1.5.0's tag is broken** — see §6) · CI: GitHub Actions, green on Ubuntu + Windows, Python 3.10/3.12.
 
 ## 1. Core Purpose & Business Value
 
@@ -79,6 +79,8 @@ finsight/
 
 ### 4.5 Other engines in one line each
 `recon.reconcile` (key+amount tolerance matching, dup detection) + `investigate.py` (root-cause decomposition, typo pairs via difflib); `data_quality` streaming accumulator (distinct/reservoir/dup-hash caps `1e5/2e5/3e6`) — chunked and whole must produce identical reports (tested); `api_explorer.ApiExplorer(session=…)` fake-transport-testable; `core/plugins.py` discovers `FinSightPlugin` subclasses (pkgutil for frozen builds, filesystem for user dir), broken plugins are logged and skipped, ids validated, built-ins win collisions.
+
+**v1.6.0 additions:** `modules/amounts.py` is the ONE money parser (text amounts, accounting negatives, Cr/Dr, percents) — builder + all templates route through `parse_amount_series`; Builder gained **Median** and **Count Distinct** aggregates whose TOTAL rows recompute over the whole dataset; fully blank rows are dropped before pivoting.
 
 ## 5. AI-to-AI Debugging Heuristics (READ BEFORE TOUCHING CODE)
 
