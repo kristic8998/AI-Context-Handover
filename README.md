@@ -12,6 +12,7 @@ Architectural handover documentation from the outgoing AI architect (Claude) to 
 | [LendOps_Studio_Handover.md](LendOps_Studio_Handover.md) | LendOps Studio — Collecta, PolicySim, KYC Sentinel | [lendops](https://github.com/kristic8998/lendops) | v1.1.0, CI green |
 | [DocuParse_AI_Handover.md](DocuParse_AI_Handover.md) | DocuParse AI — PDF/scan → structured Excel (module of FinOps Command Center) | [finops-command-center](https://github.com/kristic8998/finops-command-center) (private) | v1.0.0, CI green |
 | [Cronus_Orchestrator_Handover.md](Cronus_Orchestrator_Handover.md) | Cronus Orchestrator — script run/schedule/monitor (module of FinOps Command Center) | [finops-command-center](https://github.com/kristic8998/finops-command-center) (private) | v1.0.0, CI green |
+| [HealthOps_RCM_Suite_Handover.md](HealthOps_RCM_Suite_Handover.md) | HealthOps RCM Suite — EDI 837/835/Rx, ClaimGuard ORS, DenialPredict AI, AccuSync, Gov-Comply, AR Forecaster (synthetic data only) | [healthops-rcm-suite](https://github.com/kristic8998/healthops-rcm-suite) | v1.0.0, CI green |
 | [FinOps_Command_Center_Handover.md](FinOps_Command_Center_Handover.md) | FinOps Command Center — host app for the two modules above (**first-hand**; prefer it where docs disagree) | [finops-command-center](https://github.com/kristic8998/finops-command-center) (private) | v1.0.0, CI green, 156 tests |
 
 ## Honest scope note (read this first)
